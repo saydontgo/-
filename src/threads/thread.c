@@ -237,7 +237,7 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  insert_threads(t);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -296,6 +296,30 @@ thread_exit (void)
   NOT_REACHED ();
 }
 
+/*按照优先级插入线程*/
+void insert_threads(struct thread *cur)
+{
+  ASSERT(&ready_list!=NULL);
+  ASSERT(&cur->elem!=NULL);
+
+  if(list_empty(&ready_list))
+  {
+    list_push_back(&ready_list,&cur->elem);
+    return;
+  }
+  struct list_elem*e;
+  for(e=list_begin(&ready_list);e!=list_end(&ready_list);e=list_next(e))
+  {
+    struct thread *tmp=list_entry(e,struct thread,elem);
+    if(tmp->priority<cur->priority)
+    {
+      list_insert(e,&cur->elem);
+      return;
+    }
+  }
+  list_push_back(&ready_list,&cur->elem);
+}
+
 /** Yields the CPU.  The current thread is not put to sleep and
    may be scheduled again immediately at the scheduler's whim. */
 void
@@ -308,7 +332,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+    insert_threads(cur);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
