@@ -237,7 +237,7 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  insert_threads(t);
+  insert_threads(t);      /*将线程加入就绪队列*/
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -302,11 +302,6 @@ void insert_threads(struct thread *cur)
   ASSERT(&ready_list!=NULL);
   ASSERT(&cur->elem!=NULL);
 
-  if(list_empty(&ready_list))
-  {
-    list_push_back(&ready_list,&cur->elem);
-    return;
-  }
   struct list_elem*e;
   for(e=list_begin(&ready_list);e!=list_end(&ready_list);e=list_next(e))
   {
@@ -331,8 +326,8 @@ thread_yield (void)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
-  if (cur != idle_thread) 
-    insert_threads(cur);
+  if (cur != idle_thread)   /*如果该线程不是idle空转线程*/
+    insert_threads(cur);    /*调度线程时将线程加入到就绪队列*/
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
