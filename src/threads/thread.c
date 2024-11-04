@@ -237,7 +237,8 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  insert_threads(t);      /*将线程加入就绪队列*/
+  if(!thread_mlfqs)
+  priority_insert_threads(t,&ready_list);      /*将线程加入就绪队列*/
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -297,13 +298,13 @@ thread_exit (void)
 }
 
 /*按照优先级插入线程*/
-void insert_threads(struct thread *cur)
+void priority_insert_threads(struct thread *cur,struct list*list)
 {
-  ASSERT(&ready_list!=NULL);
+  ASSERT(list!=NULL);
   ASSERT(&cur->elem!=NULL);
 
   struct list_elem*e;
-  for(e=list_begin(&ready_list);e!=list_end(&ready_list);e=list_next(e))
+  for(e=list_begin(list);e!=list_end(list);e=list_next(e))
   {
     struct thread *tmp=list_entry(e,struct thread,elem);
     if(tmp->priority<cur->priority)
@@ -312,7 +313,7 @@ void insert_threads(struct thread *cur)
       return;
     }
   }
-  list_push_back(&ready_list,&cur->elem);
+  list_push_back(list,&cur->elem);
 }
 
 /** Yields the CPU.  The current thread is not put to sleep and
@@ -324,10 +325,12 @@ thread_yield (void)
   enum intr_level old_level;
   
   ASSERT (!intr_context ());
-
   old_level = intr_disable ();
+  printf("线程%s放弃cpu\n",cur->name);
   if (cur != idle_thread)   /*如果该线程不是idle空转线程*/
-    insert_threads(cur);    /*调度线程时将线程加入到就绪队列*/
+    // if(!thread_mlfqs)
+    // priority_insert_threads(cur,&ready_list);    /*调度线程时将线程加入到就绪队列*/
+    list_push_back(&ready_list,&cur->elem);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -514,7 +517,43 @@ next_thread_to_run (void)
   else
     return list_entry (list_pop_front (&ready_list), struct thread, elem);
 }
+/*让当前进程休眠ticks时间*/
+void thread_sleep(int64_t ticks)
+{
+  if(ticks<=0)return;
+  struct thread*cur=thread_current();
 
+  enum intr_level old_level=intr_disable(); //关闭中断
+  //printf("线程%s睡去\n",cur->name);
+  if(cur!=idle_thread)
+  {
+    cur->status=THREAD_SLEEP;
+    cur->wake_time=timer_ticks()+ticks;
+    schedule();
+  }
+  intr_set_level(old_level);  //恢复中断
+}
+
+/*检查是否有休眠进程*/
+void wakeup_potential_sleep_thread()
+{
+  struct list_elem*e;
+  int64_t cur_time=timer_ticks();
+  for(e=list_begin(&all_list);e!=list_end(&all_list);e=list_next(e))
+  {
+    struct thread*tmp=list_entry(e,struct thread,allelem);
+    enum intr_level old_level=intr_disable(); //关闭中断
+    if(tmp->status==THREAD_SLEEP&&tmp->wake_time<=cur_time)
+    {
+      /*唤醒进程*/
+      tmp->status=THREAD_READY;
+      printf("线程%s醒来\n",tmp->name);
+      if(!thread_mlfqs)
+      priority_insert_threads(tmp,&ready_list);
+    }
+    intr_set_level(old_level);//关闭中断
+  }
+}
 /** Completes a thread switch by activating the new thread's page
    tables, and, if the previous thread is dying, destroying it.
 
