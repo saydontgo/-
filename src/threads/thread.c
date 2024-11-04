@@ -328,9 +328,9 @@ thread_yield (void)
   old_level = intr_disable ();
   printf("线程%s放弃cpu\n",cur->name);
   if (cur != idle_thread)   /*如果该线程不是idle空转线程*/
-    // if(!thread_mlfqs)
-    // priority_insert_threads(cur,&ready_list);    /*调度线程时将线程加入到就绪队列*/
-    list_push_back(&ready_list,&cur->elem);
+  if(!thread_mlfqs)
+  priority_insert_threads(cur,&ready_list);/*调度线程时将线程加入就绪队列*/
+  //  list_push_back(&ready_list,&cur->elem);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -524,7 +524,6 @@ void thread_sleep(int64_t ticks)
   struct thread*cur=thread_current();
 
   enum intr_level old_level=intr_disable(); //关闭中断
-  //printf("线程%s睡去\n",cur->name);
   if(cur!=idle_thread)
   {
     cur->status=THREAD_SLEEP;
