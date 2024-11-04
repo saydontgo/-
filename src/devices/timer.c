@@ -94,6 +94,7 @@ void timer_sleep(int64_t ticks) {
   thread_sleep(ticks);
 }
 
+
 /** Sleeps for approximately MS milliseconds.  Interrupts must be
    turned on. */
 void
@@ -163,7 +164,7 @@ timer_print_stats (void)
 {
   printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
-
+
 /** Timer interrupt handler. */
 static void
 timer_interrupt (struct intr_frame *args UNUSED)

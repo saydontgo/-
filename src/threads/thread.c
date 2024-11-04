@@ -326,11 +326,11 @@ thread_yield (void)
   
   ASSERT (!intr_context ());
   old_level = intr_disable ();
-  printf("线程%s放弃cpu\n",cur->name);
+  // timer_print_stats (); 
+  // printf("线程%s放弃cpu\n",cur->name);
   if (cur != idle_thread)   /*如果该线程不是idle空转线程*/
   if(!thread_mlfqs)
   priority_insert_threads(cur,&ready_list);/*调度线程时将线程加入就绪队列*/
-  //  list_push_back(&ready_list,&cur->elem);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -397,7 +397,7 @@ thread_get_recent_cpu (void)
   /* Not yet implemented. */
   return 0;
 }
-
+
 /** Idle thread.  Executes when no other thread is ready to run.
 
    The idle thread is initially put on the ready list by
@@ -517,6 +517,7 @@ next_thread_to_run (void)
   else
     return list_entry (list_pop_front (&ready_list), struct thread, elem);
 }
+
 /*让当前进程休眠ticks时间*/
 void thread_sleep(int64_t ticks)
 {
@@ -546,13 +547,15 @@ void wakeup_potential_sleep_thread()
     {
       /*唤醒进程*/
       tmp->status=THREAD_READY;
-      printf("线程%s醒来\n",tmp->name);
+      // timer_print_stats();
+      // printf("线程%s醒来\n",tmp->name);
       if(!thread_mlfqs)
       priority_insert_threads(tmp,&ready_list);
     }
     intr_set_level(old_level);//关闭中断
   }
 }
+
 /** Completes a thread switch by activating the new thread's page
    tables, and, if the previous thread is dying, destroying it.
 
